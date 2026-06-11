@@ -1,0 +1,42 @@
+# docker-compose.yml
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: todoapp
+      POSTGRES_USER: todo_user
+      POSTGRES_PASSWORD: todo_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - todo_network
+
+  backend:
+    build: ./backend
+    environment:
+      DB_HOST: postgres
+      DB_USER: todo_user
+      DB_PASSWORD: todo_password
+      DB_NAME: todoapp
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+    networks:
+      - todo_network
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - todo_network
+
+networks:
+  todo_network:
+
+volumes:
+  postgres_data:

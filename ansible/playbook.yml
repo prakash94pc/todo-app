@@ -1,0 +1,51 @@
+# ansible/playbook.yml
+---
+- name: Deploy Todo Application
+  hosts: all
+  become: yes
+  vars:
+    db_host: "{{ lookup('env', 'DB_HOST') }}"
+    db_user: "{{ lookup('env', 'DB_USER') }}"
+    db_password: "{{ lookup('env', 'DB_PASSWORD') }}"
+
+  tasks:
+    - name: Create app directory
+      file:
+        path: /opt/todo-app
+        state: directory
+        mode: '0755'
+
+    - name: Copy docker-compose file
+      template:
+        src: docker-compose.yml.j2
+        dest: /opt/todo-app/docker-compose.yml
+        mode: '0644'
+
+    - name: Copy application code
+      synchronize:
+        src: ../frontend/
+        dest: /opt/todo-app/frontend/
+        delete: yes
+      delegate_to: localhost
+
+    - name: Copy backend code
+      synchronize:
+        src: ../backend/
+        dest: /opt/todo-app/backend/
+        delete: yes
+      delegate_to: localhost
+
+    - name: Build and start containers
+      docker_compose:
+        project_src: /opt/todo-app
+        state: present
+        restarted: yes
+
+    - name: Ensure nginx is running
+      docker_container:
+        name: nginx
+        image: nginx:alpine
+        ports:
+          - "80:80"
+        networks:
+          - todo_network
